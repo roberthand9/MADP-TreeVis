@@ -1,6 +1,6 @@
 # MADP-TreeVis
 
-Developed as part of a Final Year Computer Science project at the University of Liverpool, MADP-TreeVis aims to provide an easy, intuitive and interactive way to visualise policies for the [MADP Toolbox](https://github.com/MADP/MADPToolbox). It does this with two primary features, the 'Full Tree Viewer' which allows the policies to be viewed as rooted trees in their entirety and the 'Policy Visualiser View' that acts as a way to visualise a path through a policy by providing the observations to the agents. It provides a built in interface in order to plan directly from the program in addition to other features include saving the policies to a svg file, reading in a policy outputted from a previous plan made by the toolbox and customisation of the visualisations.
+Developed as part of a Final Year Computer Science project at the University of Liverpool, MADP-TreeVis aims to provide an easy, intuitive and interactive way to visualise policies for the [MADP Toolbox](https://github.com/MADPToolbox/MADP). It does this with two primary features, the 'Full Tree Viewer' which allows the policies to be viewed as rooted trees in their entirety and the 'Policy Visualiser View' that acts as a way to visualise a path through a policy by providing the observations to the agents. It provides a built in interface in order to plan directly from the program in addition to other features include saving the policies to a svg file, reading in a policy outputted from a previous plan made by the toolbox and customisation of the visualisations.
 
 It has been developed using the Qt framework and is written in C++.
 
@@ -52,6 +52,6 @@ I have provided as a convenience a compiled a version and bundled the neccessary
 
 To use it simply
 
-1. Download the archive from [the release page](https://github.com/roberthand9/MADP-TreeVis/releases/tag/v0.1).
+1. Download the archive from [the release page](https://github.com/roberthand9/MADP-TreeVis/releases).
 2. Extract the archive
 3. Run ./start.sh (needed to set LD_LIBRARY_PATH)

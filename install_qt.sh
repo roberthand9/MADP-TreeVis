@@ -1,4 +1,4 @@
-# !/bin/bash
+#!/bin/bash
 
 # If not root
 if [[ $EUID -ne 0 ]]; then
@@ -9,9 +9,10 @@ fi
 # If not one argument given
 if [ "$#" -ne 1 ]; then
     echo "Run as ./install_qt.sh /path/to/install/qt/to"
+    exit 1
 fi
 
-$installPath = $1
+installPath=$1
 
 # Update and install necessary packages
 apt update

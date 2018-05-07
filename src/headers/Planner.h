@@ -19,7 +19,7 @@ class Planner {
 	public:
 		/// Destructor
 		virtual ~Planner() {
-			std::cout << "~Planner" << std::endl;
+			//std::cout << "~Planner" << std::endl;
 		}
 
 		/// Pure virtual, implemented by base classes

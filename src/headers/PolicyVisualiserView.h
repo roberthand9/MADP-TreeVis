@@ -84,8 +84,8 @@ class PolicyVisualiserView : public QWidget {
 		void SetInitialState();
 
 		/// \brief Slot for Randomise Observations button pressed.
-		/// Randomises on number of items in boxes, not
-		/// based on JO Probability
+		/// Randomises observations basd on the probability defined in the
+		/// problem then supplies this random observations
 		void RandomiseObservations();
 
 		/// Slot for Supply Observations button pressed
@@ -163,6 +163,50 @@ class PolicyVisualiserView : public QWidget {
 		double GetCurrentJointObservationProbability();
 
 		///
+		/// \brief GetIndidividualObservationProbability
+		/// \param agentIndex The agent index to get the probability for
+		/// \param observationIndex The individual observation index to get the
+		/// probability for
+		/// \param jointActionIndex The joint action index taken
+		/// \param stateIndex The state index
+		/// \param succStateIndex The successor state index
+		/// \return The probability of the agent recieving the individual
+		/// observation based on the
+		///
+		double GetIndidividualObservationProbability(const Index &agentIndex,
+													 const Index &observationIndex,
+													 const Index &jointActionIndex,
+													 const Index &stateIndex,
+													 const Index &succStateIndex);
+
+
+		///
+		/// \brief Gets the possible combinations of observations given the
+		/// observation numbers. The given agent index and observation index
+		/// ensure the combinations returned contain this individual observation
+		/// index for the given agent index. This method is used as a helper method
+		/// tfor ghte GetIndividualObservationProbability().
+		/// \param observationNumbers The number of possible observations for each agent
+		/// \param agentIndex The agent index to set the value of the observation index as
+		/// \param observationIndex The individual observation index to leave as the agent index
+		/// \return Each combination of observations with the agent indexs' observation
+		/// fixed as the observation index given
+		///
+		std::vector<std::vector<Index>> GetCombinations(const std::vector<size_t> &observationNumbers,
+														const int &agentIndex,
+														const int &observationIndex);
+
+
+		///
+		/// \brief Computes the individual observation probabilities based on
+		/// the data in current visualisation
+		/// \return A vector containing a probability for each agent of recieving
+		/// their individual observation based on the data in currentVisualisation
+		///
+		std::vector<double> GetIndividualObservationProbabilities();
+
+
+		///
 		/// \brief Gets a tree widget containing all the Joint Observations
 		/// based on the information in currentVisualisation in the format
 		/// JOI | JO Name | Probability
@@ -180,7 +224,7 @@ class PolicyVisualiserView : public QWidget {
 		/// \param probability The probability of recieving the joint
 		/// observation for this set of nodes
 		///
-		void AddNextNodes(const double& probability);
+		void AddNextNodes(const std::vector<double> &individualProbabilities);
 
 		/// Height to pad from top of scene to nodes
 		const int padding = 75;

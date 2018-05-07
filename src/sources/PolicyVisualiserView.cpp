@@ -55,7 +55,7 @@ void PolicyVisualiserView::SetupUI(QWidget* parent) {
 
 	// Create buttons to use for visualisation and connect
 	supplyObservationsButton = new QPushButton("Supply Observations", controlInfoWidget);
-	randomiseObservationsButton = new QPushButton("Randomise Observations", controlInfoWidget);
+	randomiseObservationsButton = new QPushButton("Supply Rand Obvs", controlInfoWidget);
 	viewJointObservationsButton = new QPushButton("View all Joint Observations", controlInfoWidget);
 
 	connect(supplyObservationsButton, &QPushButton::clicked, this, &PolicyVisualiserView::SupplyObservations);
@@ -211,6 +211,119 @@ void PolicyVisualiserView::ChangeEdgeColourProbability(bool checked) {
 }
 
 
+double PolicyVisualiserView::GetIndidividualObservationProbability(
+											const Index &agentIndex,
+											const Index &observationIndex,
+											const Index &jointActionIndex,
+											const Index &stateIndex,
+											const Index &succStateIndex) {
+	double toReturn = 0.0;
+
+	// Get num observations vector
+	std::vector<size_t> numObservations =
+			pManager->GetPlanningUnit()->GetNrObservations();
+
+	// Get possible combinations
+	std::vector<std::vector<Index>> combinations = GetCombinations(numObservations, agentIndex, observationIndex);
+
+	for(std::vector<Index> vect : combinations) {
+		// Get joint observation index for this vector
+		Index jointObservationIndex = pManager->GetPlanningUnit()->IndividualToJointObservationIndices(vect);
+
+		// Add probability
+		toReturn += pManager->GetPlanningUnit()->GetProblem()->
+				GetObservationProbability(stateIndex, jointActionIndex, succStateIndex, jointObservationIndex);
+	}
+
+	return toReturn;
+}
+
+
+std::vector<std::vector<Index>> PolicyVisualiserView::GetCombinations(
+									const std::vector<size_t> &observationNumbers,
+									const int &agentIndex,
+									const int &observationIndex) {
+	int combinations = 1;
+
+	// Calculate combinations
+	for(unsigned int i=0; i<observationNumbers.size(); ++i) {
+
+		// Skip agents index
+		if(i != agentIndex) {
+			combinations *= observationNumbers[i];
+		}
+	}
+
+	// Combinations to return
+	std::vector<std::vector<Index>> toReturn(combinations);
+
+	// Start off with 0s
+	std::vector<Index> current(observationNumbers.size(), 0);
+
+	// Set the agent index we leave unchanged to the observation index
+	current[agentIndex] = observationIndex;
+	toReturn[0] = current;
+
+	// Current index of incrementation is last
+	int currentIndex = observationNumbers.size()-1;
+
+	for(int j=1; j<combinations; ++j) {
+
+		// If we can add one, do it
+		if((current[currentIndex] < observationNumbers[currentIndex]-1)
+		   && currentIndex != agentIndex) {
+
+			current[currentIndex]++;
+
+			// Add vector to set
+			toReturn[j] = current;
+		} else {
+
+			// While we don't have space to the 'left' or we're skipping due to agent index, decrement
+			while((observationNumbers[currentIndex]-1 == current[currentIndex])
+					|| (currentIndex == agentIndex)) {
+				--currentIndex;
+			}
+
+			// Reset all to right back to 0
+			for(int i=currentIndex+1; i<observationNumbers.size(); ++i) {
+				if(i != agentIndex) {
+					current[i] = 0;
+				}
+			}
+
+			// Increment current and set back to end
+			current[currentIndex]++;
+			currentIndex = observationNumbers.size()-1;
+
+			// Add vector to set
+			toReturn[j] = current;
+		}
+	}
+
+	return toReturn;
+}
+
+
+
+std::vector<double> PolicyVisualiserView::GetIndividualObservationProbabilities() {
+	// Create vector of size
+	std::vector<double> individualObservationProbabilities(currentVisualisation.numAgents);
+
+	// Get values based on data in currentVisualisation
+	for(Index i=0; i<currentVisualisation.numAgents; ++i) {
+		individualObservationProbabilities[i] = GetIndidividualObservationProbability(
+					i,
+					observationSelectionComboBoxes[i]->currentIndex(),
+					currentVisualisation.currentJAIndex,
+					currentVisualisation.currentStateIndex,
+					currentVisualisation.successorStateIndex);
+	}
+
+	return individualObservationProbabilities;
+}
+
+
 void PolicyVisualiserView::RecieveJointObservation(int joIndex) {
 	// Get corresponding individual observation indexes
 	std::vector<Index> individualObvservationIndexes =
@@ -329,8 +442,10 @@ void PolicyVisualiserView::SupplyObservations() {
 	// Next time step
 	++currentVisualisation.timeStep;
 
-	// Get joint observation index and probability of recieving this given the action and state
+	// Get joint observation probability and individual observationb probabilities,
+	// do this here before sampling the successor JOHI
 	double probability = GetCurrentJointObservationProbability();
+	std::vector<double> individualProbabilities = GetIndividualObservationProbabilities();
 
 	// Set probability based on first time step or not
 	if(currentVisualisation.timeStep == 2) {
@@ -347,7 +462,7 @@ void PolicyVisualiserView::SupplyObservations() {
 	currentVisualisation.currentJAIndex = pManager->GetJointActionIndex(currentVisualisation.johIndex);
 
 	// Add the next set of nodes
-	AddNextNodes(probability);
+	AddNextNodes(individualProbabilities);
 
 	// Set old successor state to current state and sample new successor state
 	currentVisualisation.currentStateIndex = currentVisualisation.successorStateIndex;
@@ -430,7 +545,7 @@ void PolicyVisualiserView::SetInitialState() {
 	UpdateProbabilityLabel();
 
 	// Add the first set of action nodes
-	AddNextNodes(GetCurrentJointObservationProbability());
+	AddNextNodes(GetIndividualObservationProbabilities());
 
 	// If only planned for one time step, nothing to do
 	if(currentVisualisation.horizon == 1) {
@@ -452,7 +567,7 @@ void PolicyVisualiserView::UpdateJointActionLabel() {
 }
 
 
-void PolicyVisualiserView::AddNextNodes(const double &probability) {
+void PolicyVisualiserView::AddNextNodes(const std::vector<double> &individualProbabilities) {
 	PlanningUnitDecPOMDPDiscrete* pUnit = pManager->GetPlanningUnit();
 
 	// Get individual actions based on the JA index
@@ -488,7 +603,7 @@ void PolicyVisualiserView::AddNextNodes(const double &probability) {
 			Edge* edge = new Edge(parent,
 								  child,
 								  pUnit->GetObservation(i, observationSelectionComboBoxes[i]->currentIndex())->GetName(),
-								  probability);
+								  individualProbabilities[i]);
 
 			edge->ChangeColourToMatchProbability(!colourToObservationProbabilityCheckBox->isChecked());
 			graphicsView->scene()->addItem(edge);
@@ -519,10 +634,24 @@ void PolicyVisualiserView::SetHeightSeparation() {
 
 
 void PolicyVisualiserView::RandomiseObservations() {
-	// Randomise each box
-	for(QComboBox* box : observationSelectionComboBoxes) {
-		box->setCurrentIndex(rand() % box->count());
+	// Sample observation
+	Index sampledObservation = pManager->GetPlanningUnit()->GetProblem()->
+			SampleJointObservation(
+				currentVisualisation.currentStateIndex,
+				currentVisualisation.currentJAIndex,
+				currentVisualisation.successorStateIndex);
+
+	// Get individual indexes
+	std::vector<Index> individualObvs = pManager->GetPlanningUnit()->
+			JointToIndividualObservationIndices(sampledObservation);
+
+	// Set each box
+	for(Index i=0; i<observationSelectionComboBoxes.size(); ++i) {
+		observationSelectionComboBoxes[i]->setCurrentIndex(individualObvs[i]);
 	}
+
+	// Supply
+	SupplyObservations();
 }
 
 
@@ -690,6 +819,7 @@ void PolicyVisualiserView::JointObservationUpdated() {
 	// Enable if possible to supply the observation
 	supplyObservationsButton->setEnabled(GetCurrentJointObservationProbability() > 0);
 }
+
 
 double PolicyVisualiserView::GetCurrentJointObservationProbability() {
 	// Get the probability based on the data in currentVisualisation
